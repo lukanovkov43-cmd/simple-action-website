@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Logger Website</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Action Logger</h1>
+            <p>Perform actions and watch them get logged in real-time</p>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <!-- Counter Section -->
+                <section class="card">
+                    <h2>🔢 Counter</h2>
+                    <div class="counter-display" id="counter">0</div>
+                    <div class="button-group">
+                        <button onclick="incrementCounter()" class="btn btn-primary">+</button>
+                        <button onclick="decrementCounter()" class="btn btn-primary">−</button>
+                        <button onclick="resetCounter()" class="btn btn-warning">Reset</button>
+                    </div>
+                </section>
+
+                <!-- Todo Section -->
+                <section class="card">
+                    <h2>✓ Todo List</h2>
+                    <div class="input-group">
+                        <input type="text" id="todoInput" placeholder="Add a new todo..." onkeypress="if(event.key === 'Enter') addTodo()">
+                        <button onclick="addTodo()" class="btn btn-primary">Add</button>
+                    </div>
+                    <ul id="todoList" class="todo-list"></ul>
+                </section>
+
+                <!-- Color Changer -->
+                <section class="card">
+                    <h2>🎨 Theme</h2>
+                    <button onclick="changeColor()" class="btn btn-primary btn-block">Change Background</button>
+                </section>
+
+                <!-- Text Logger -->
+                <section class="card">
+                    <h2>📝 Custom Logger</h2>
+                    <div class="input-group">
+                        <input type="text" id="textInput" placeholder="Enter text to log..." onkeypress="if(event.key === 'Enter') logText()">
+                        <button onclick="logText()" class="btn btn-primary">Log</button>
+                    </div>
+                </section>
+
+                <!-- Info Logger -->
+                <section class="card">
+                    <h2>ℹ️ Page Info</h2>
+                    <button onclick="logPageInfo()" class="btn btn-primary btn-block">Log Page Info</button>
+                </section>
+
+                <!-- Data Management -->
+                <section class="card">
+                    <h2>⚙️ Data Management</h2>
+                    <div class="button-group">
+                        <button onclick="downloadLogs()" class="btn btn-success">Download Logs</button>
+                        <button onclick="clearLogs()" class="btn btn-danger">Clear All</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Panel - Logs -->
+            <div class="right-panel">
+                <section class="card card-logs">
+                    <h2>📋 Action Logs</h2>
+                    <div class="log-count" id="logCount">0 actions logged</div>
+                    <div class="log-container" id="logContainer">
+                        <div class="log-empty">No actions yet. Start by performing an action above!</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
