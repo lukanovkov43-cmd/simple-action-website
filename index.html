@@ -3,82 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Action Logger Website</title>
+    <title>Click Master - Idle Clicker Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📊 Action Logger</h1>
-            <p>Perform actions and watch them get logged in real-time</p>
+            <h1>🎮 Click Master</h1>
+            <p>Click your way to fortune!</p>
         </header>
 
         <div class="main-content">
             <div class="left-panel">
-                <!-- Counter Section -->
-                <section class="card">
-                    <h2>🔢 Counter</h2>
-                    <div class="counter-display" id="counter">0</div>
-                    <div class="button-group">
-                        <button onclick="incrementCounter()" class="btn btn-primary">+</button>
-                        <button onclick="decrementCounter()" class="btn btn-primary">−</button>
-                        <button onclick="resetCounter()" class="btn btn-warning">Reset</button>
+                <!-- Stats Section -->
+                <section class="card stats-card">
+                    <h2>📊 Stats</h2>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Points:</span>
+                        <span class="stat-value" id="points">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Points/Click:</span>
+                        <span class="stat-value" id="pointsPerClick">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Clicks:</span>
+                        <span class="stat-value" id="totalClicks">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Combo:</span>
+                        <span class="stat-value" id="combo">0x</span>
                     </div>
                 </section>
 
-                <!-- Todo Section -->
+                <!-- Upgrades Section -->
                 <section class="card">
-                    <h2>✓ Todo List</h2>
-                    <div class="input-group">
-                        <input type="text" id="todoInput" placeholder="Add a new todo..." onkeypress="if(event.key === 'Enter') addTodo()">
-                        <button onclick="addTodo()" class="btn btn-primary">Add</button>
-                    </div>
-                    <ul id="todoList" class="todo-list"></ul>
+                    <h2>⬆️ Upgrades</h2>
+                    <div class="upgrades-list" id="upgradesList"></div>
                 </section>
 
-                <!-- Color Changer -->
+                <!-- Auto Clickers Section -->
                 <section class="card">
-                    <h2>🎨 Theme</h2>
-                    <button onclick="changeColor()" class="btn btn-primary btn-block">Change Background</button>
-                </section>
-
-                <!-- Text Logger -->
-                <section class="card">
-                    <h2>📝 Custom Logger</h2>
-                    <div class="input-group">
-                        <input type="text" id="textInput" placeholder="Enter text to log..." onkeypress="if(event.key === 'Enter') logText()">
-                        <button onclick="logText()" class="btn btn-primary">Log</button>
-                    </div>
-                </section>
-
-                <!-- Info Logger -->
-                <section class="card">
-                    <h2>ℹ️ Page Info</h2>
-                    <button onclick="logPageInfo()" class="btn btn-primary btn-block">Log Page Info</button>
+                    <h2>🤖 Auto Clickers</h2>
+                    <div class="auto-clickers-list" id="autoClickersList"></div>
                 </section>
 
                 <!-- Data Management -->
                 <section class="card">
-                    <h2>⚙️ Data Management</h2>
+                    <h2>⚙️ Data</h2>
                     <div class="button-group">
-                        <button onclick="downloadLogs()" class="btn btn-success">Download Logs</button>
-                        <button onclick="clearLogs()" class="btn btn-danger">Clear All</button>
+                        <button onclick="downloadGameData()" class="btn btn-success">Download Save</button>
+                        <button onclick="resetGame()" class="btn btn-danger">Reset Game</button>
                     </div>
+                </section>
+            </div>
+
+            <!-- Center Panel - Main Clicker -->
+            <div class="center-panel">
+                <section class="card clicker-card">
+                    <h2>Click to Earn Points</h2>
+                    <button class="big-button" id="clickButton" onclick="click()">
+                        <span class="click-text">CLICK ME!</span>
+                    </button>
+                    <div class="combo-display" id="comboDisplay"></div>
                 </section>
             </div>
 
             <!-- Right Panel - Logs -->
             <div class="right-panel">
                 <section class="card card-logs">
-                    <h2>📋 Action Logs</h2>
+                    <h2>📋 Action Log</h2>
                     <div class="log-count" id="logCount">0 actions logged</div>
                     <div class="log-container" id="logContainer">
-                        <div class="log-empty">No actions yet. Start by performing an action above!</div>
+                        <div class="log-empty">Start clicking to see your actions!</div>
                     </div>
                 </section>
             </div>
         </div>
     </div>
+
+    <!-- Floating Points Animation -->
+    <div id="floatingPointsContainer"></div>
 
     <script src="script.js"></script>
 </body>

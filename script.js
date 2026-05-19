@@ -1,180 +1,211 @@
-// Action Log Storage
-let actionLogs = JSON.parse(localStorage.getItem('actionLogs')) || [];
-let counter = parseInt(localStorage.getItem('counter')) || 0;
-let todos = JSON.parse(localStorage.getItem('todos')) || [];
+// Game State
+let gameState = {
+    points: parseInt(localStorage.getItem('clickerPoints')) || 0,
+    totalClicks: parseInt(localStorage.getItem('totalClicks')) || 0,
+    pointsPerClick: 1,
+    combo: 1,
+    comboTimer: null,
+    actionLogs: JSON.parse(localStorage.getItem('clickerLogs')) || [],
+    upgrades: [
+        { id: 'double', name: '2x Multiplier', cost: 50, owned: parseInt(localStorage.getItem('upgrade_double')) || 0, multiplier: 2 },
+        { id: 'triple', name: '3x Multiplier', cost: 150, owned: parseInt(localStorage.getItem('upgrade_triple')) || 0, multiplier: 3 },
+        { id: 'ten', name: '10x Multiplier', cost: 500, owned: parseInt(localStorage.getItem('upgrade_ten')) || 0, multiplier: 10 },
+    ],
+    autoClickers: [
+        { id: 'ac1', name: 'Bot Tier 1', cost: 100, owned: parseInt(localStorage.getItem('auto_tier1')) || 0, pointsPerSecond: 1 },
+        { id: 'ac2', name: 'Bot Tier 2', cost: 500, owned: parseInt(localStorage.getItem('auto_tier2')) || 0, pointsPerSecond: 5 },
+        { id: 'ac3', name: 'Bot Tier 3', cost: 2000, owned: parseInt(localStorage.getItem('auto_tier3')) || 0, pointsPerSecond: 20 },
+        { id: 'ac4', name: 'Bot Tier 4', cost: 10000, owned: parseInt(localStorage.getItem('auto_tier4')) || 0, pointsPerSecond: 100 },
+    ]
+};
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    updateCounterDisplay();
-    renderTodos();
+    calculatePointsPerClick();
+    renderUpgrades();
+    renderAutoClickers();
+    updateStats();
     renderLogs();
-    logAction('Page Loaded', 'Website loaded at ' + new Date().toLocaleString());
+    logAction('Game Started', 'Click Master loaded');
+    startAutoClickers();
 });
 
-// Logging function - Core functionality
+// Main Click Handler
+function click() {
+    const points = gameState.pointsPerClick * gameState.combo;
+    gameState.points += points;
+    gameState.totalClicks += 1;
+    
+    // Update combo
+    clearTimeout(gameState.comboTimer);
+    gameState.combo += 1;
+    gameState.comboTimer = setTimeout(() => {
+        gameState.combo = 1;
+        updateStats();
+    }, 5000);
+    
+    // Floating points animation
+    createFloatingPoint(points);
+    
+    // Save state
+    saveGameState();
+    updateStats();
+    logAction('Click', `+${points} points (Combo: ${gameState.combo}x)`);
+}
+
+// Create floating points animation
+function createFloatingPoint(points) {
+    const container = document.getElementById('floatingPointsContainer');
+    const point = document.createElement('div');
+    point.className = 'floating-point';
+    point.textContent = `+${points}`;
+    point.style.left = (Math.random() * window.innerWidth) + 'px';
+    point.style.top = window.innerHeight + 'px';
+    
+    // Random colors
+    const colors = ['#667eea', '#43e97b', '#ffa502', '#ff6b6b', '#f5576c'];
+    point.style.color = colors[Math.floor(Math.random() * colors.length)];
+    
+    container.appendChild(point);
+    setTimeout(() => point.remove(), 2000);
+}
+
+// Calculate points per click based on upgrades
+function calculatePointsPerClick() {
+    gameState.pointsPerClick = 1;
+    gameState.upgrades.forEach(upgrade => {
+        if (upgrade.owned > 0) {
+            gameState.pointsPerClick *= Math.pow(upgrade.multiplier, upgrade.owned);
+        }
+    });
+}
+
+// Buy Upgrade
+function buyUpgrade(upgradeId) {
+    const upgrade = gameState.upgrades.find(u => u.id === upgradeId);
+    if (gameState.points >= upgrade.cost) {
+        gameState.points -= upgrade.cost;
+        upgrade.owned += 1;
+        localStorage.setItem(`upgrade_${upgradeId}`, upgrade.owned);
+        calculatePointsPerClick();
+        saveGameState();
+        renderUpgrades();
+        updateStats();
+        logAction('Upgrade Purchased', `${upgrade.name} (Total owned: ${upgrade.owned})`);
+    }
+}
+
+// Render Upgrades
+function renderUpgrades() {
+    const container = document.getElementById('upgradesList');
+    container.innerHTML = gameState.upgrades.map(upgrade => {
+        const canAfford = gameState.points >= upgrade.cost;
+        return `
+            <div class="upgrade-item ${canAfford ? 'affordable' : 'unaffordable'}">
+                <div class="upgrade-info">
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-cost">Cost: ${upgrade.cost} points</div>
+                </div>
+                <div class="upgrade-owned">${upgrade.owned}</div>
+                <button onclick="buyUpgrade('${upgrade.id}')" class="buy-btn" ${!canAfford ? 'disabled' : ''}>Buy</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Buy Auto Clicker
+function buyAutoClicker(clickerId) {
+    const clicker = gameState.autoClickers.find(c => c.id === clickerId);
+    if (gameState.points >= clicker.cost) {
+        gameState.points -= clicker.cost;
+        clicker.owned += 1;
+        localStorage.setItem(`auto_${clickerId}`, clicker.owned);
+        saveGameState();
+        renderAutoClickers();
+        updateStats();
+        logAction('Auto Clicker Purchased', `${clicker.name} (Total owned: ${clicker.owned})`);
+    }
+}
+
+// Render Auto Clickers
+function renderAutoClickers() {
+    const container = document.getElementById('autoClickersList');
+    container.innerHTML = gameState.autoClickers.map(clicker => {
+        const canAfford = gameState.points >= clicker.cost;
+        return `
+            <div class="auto-clicker-item ${canAfford ? 'affordable' : 'unaffordable'}">
+                <div class="auto-clicker-info">
+                    <div class="auto-clicker-name">${clicker.name}</div>
+                    <div class="auto-clicker-cost">Cost: ${clicker.cost} | +${clicker.pointsPerSecond}/sec</div>
+                </div>
+                <div class="auto-clicker-owned">${clicker.owned}</div>
+                <button onclick="buyAutoClicker('${clicker.id}')" class="buy-btn" ${!canAfford ? 'disabled' : ''}>Buy</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Start Auto Clickers
+function startAutoClickers() {
+    setInterval(() => {
+        let totalAutoPoints = 0;
+        gameState.autoClickers.forEach(clicker => {
+            totalAutoPoints += clicker.pointsPerSecond * clicker.owned;
+        });
+        if (totalAutoPoints > 0) {
+            gameState.points += totalAutoPoints;
+            saveGameState();
+            updateStats();
+        }
+    }, 1000);
+}
+
+// Update Stats Display
+function updateStats() {
+    document.getElementById('points').textContent = formatNumber(gameState.points);
+    document.getElementById('pointsPerClick').textContent = formatNumber(gameState.pointsPerClick);
+    document.getElementById('totalClicks').textContent = gameState.totalClicks;
+    document.getElementById('combo').textContent = gameState.combo + 'x';
+    
+    const comboElement = document.getElementById('comboDisplay');
+    if (gameState.combo > 1) {
+        comboElement.textContent = `🔥 COMBO: ${gameState.combo}x!`;
+    } else {
+        comboElement.textContent = '';
+    }
+}
+
+// Format large numbers
+function formatNumber(num) {
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num.toFixed(0);
+}
+
+// Save Game State
+function saveGameState() {
+    localStorage.setItem('clickerPoints', gameState.points);
+    localStorage.setItem('totalClicks', gameState.totalClicks);
+    localStorage.setItem('clickerLogs', JSON.stringify(gameState.actionLogs));
+}
+
+// Log Action
 function logAction(action, details) {
     const timestamp = new Date();
     const logEntry = {
         action: action,
         details: details,
-        timestamp: timestamp.toLocaleString(),
-        timeIso: timestamp.toISOString()
+        timestamp: timestamp.toLocaleTimeString(),
+        iso: timestamp.toISOString()
     };
-    
-    actionLogs.push(logEntry);
-    localStorage.setItem('actionLogs', JSON.stringify(actionLogs));
+    gameState.actionLogs.push(logEntry);
+    if (gameState.actionLogs.length > 100) {
+        gameState.actionLogs.shift();
+    }
+    localStorage.setItem('clickerLogs', JSON.stringify(gameState.actionLogs));
     renderLogs();
-}
-
-// Counter Actions
-function incrementCounter() {
-    counter++;
-    localStorage.setItem('counter', counter);
-    updateCounterDisplay();
-    logAction('Counter Incremented', `Counter is now ${counter}`);
-}
-
-function decrementCounter() {
-    counter--;
-    localStorage.setItem('counter', counter);
-    updateCounterDisplay();
-    logAction('Counter Decremented', `Counter is now ${counter}`);
-}
-
-function resetCounter() {
-    const oldValue = counter;
-    counter = 0;
-    localStorage.setItem('counter', counter);
-    updateCounterDisplay();
-    logAction('Counter Reset', `Counter reset from ${oldValue} to 0`);
-}
-
-function updateCounterDisplay() {
-    document.getElementById('counter').textContent = counter;
-}
-
-// Todo Actions
-function addTodo() {
-    const input = document.getElementById('todoInput');
-    const text = input.value.trim();
-    
-    if (!text) {
-        showNotification('Please enter a todo!', 'warning');
-        return;
-    }
-    
-    const todo = {
-        id: Date.now(),
-        text: text,
-        completed: false,
-        createdAt: new Date().toLocaleString()
-    };
-    
-    todos.push(todo);
-    localStorage.setItem('todos', JSON.stringify(todos));
-    input.value = '';
-    renderTodos();
-    logAction('Todo Added', `Added: "${text}"`);
-}
-
-function toggleTodo(id) {
-    const todo = todos.find(t => t.id === id);
-    if (todo) {
-        todo.completed = !todo.completed;
-        localStorage.setItem('todos', JSON.stringify(todos));
-        renderTodos();
-        logAction('Todo Toggled', `"${todo.text}" marked as ${todo.completed ? 'completed' : 'incomplete'}`);
-    }
-}
-
-function deleteTodo(id) {
-    const todo = todos.find(t => t.id === id);
-    if (todo) {
-        todos = todos.filter(t => t.id !== id);
-        localStorage.setItem('todos', JSON.stringify(todos));
-        renderTodos();
-        logAction('Todo Deleted', `Deleted: "${todo.text}"`);
-    }
-}
-
-function renderTodos() {
-    const list = document.getElementById('todoList');
-    list.innerHTML = '';
-    
-    todos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-        li.innerHTML = `
-            <span class="todo-text" onclick="toggleTodo(${todo.id})">${escapeHtml(todo.text)}</span>
-            <button onclick="deleteTodo(${todo.id})" class="btn btn-danger btn-small">Delete</button>
-        `;
-        list.appendChild(li);
-    });
-}
-
-// Color Changer
-function changeColor() {
-    const colors = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-    ];
-    
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    document.body.style.background = randomColor;
-    logAction('Background Changed', 'Background color changed to a random color');
-}
-
-// Text Logging
-function logText() {
-    const input = document.getElementById('textInput');
-    const text = input.value.trim();
-    
-    if (!text) {
-        showNotification('Please enter some text!', 'warning');
-        return;
-    }
-    
-    logAction('Text Logged', `User input: "${text}"`);
-    input.value = '';
-    showNotification('Text logged!', 'success');
-}
-
-// Notifications
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    logAction('Notification Shown', `${type.toUpperCase()}: ${message}`);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-// Page Info
-function logPageInfo() {
-    const info = {
-        'User Agent': navigator.userAgent,
-        'Language': navigator.language,
-        'Platform': navigator.platform,
-        'Screen Size': `${window.innerWidth}x${window.innerHeight}`,
-        'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-        'Cookies Enabled': navigator.cookieEnabled,
-        'Local Storage Available': !!localStorage,
-    };
-    
-    let details = Object.entries(info)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(' | ');
-    
-    logAction('Page Info Logged', details);
-    showNotification('Page info logged!', 'success');
 }
 
 // Render Logs
@@ -182,78 +213,48 @@ function renderLogs() {
     const container = document.getElementById('logContainer');
     const count = document.getElementById('logCount');
     
-    count.textContent = `${actionLogs.length} action${actionLogs.length !== 1 ? 's' : ''} logged`;
+    count.textContent = `${gameState.actionLogs.length} action${gameState.actionLogs.length !== 1 ? 's' : ''} logged`;
     
-    if (actionLogs.length === 0) {
-        container.innerHTML = '<div class="log-empty">No actions yet. Start by performing an action above!</div>';
+    if (gameState.actionLogs.length === 0) {
+        container.innerHTML = '<div class="log-empty">Start clicking to see your actions!</div>';
         return;
     }
     
-    container.innerHTML = actionLogs
+    container.innerHTML = gameState.actionLogs
         .slice()
         .reverse()
-        .map((log, index) => `
+        .map(log => `
             <div class="log-entry">
                 <div class="log-timestamp">${log.timestamp}</div>
-                <div class="log-message"><strong>${escapeHtml(log.action)}</strong>: ${escapeHtml(log.details)}</div>
+                <div class="log-message"><strong>${log.action}</strong>: ${log.details}</div>
             </div>
         `)
         .join('');
 }
 
-// Clear Logs
-function clearLogs() {
-    if (confirm('Are you sure you want to clear all logs? This cannot be undone.')) {
-        actionLogs = [];
-        todos = [];
-        counter = 0;
-        localStorage.clear();
-        updateCounterDisplay();
-        renderTodos();
-        renderLogs();
-        showNotification('All logs and data cleared!', 'success');
-        logAction('All Data Cleared', 'User cleared all logs, todos, and counter');
-    }
-}
-
-// Download Logs
-function downloadLogs() {
-    if (actionLogs.length === 0) {
-        showNotification('No logs to download!', 'warning');
-        return;
-    }
-    
-    const csvContent = [
-        ['Timestamp', 'Action', 'Details'],
-        ...actionLogs.map(log => [
-            log.timestamp,
-            log.action,
-            log.details
-        ])
-    ]
-        .map(row => row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(','))
-        .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+// Download Game Data
+function downloadGameData() {
+    const data = {
+        points: gameState.points,
+        totalClicks: gameState.totalClicks,
+        upgrades: gameState.upgrades,
+        autoClickers: gameState.autoClickers,
+        exportDate: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `action-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `click-master-save-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
-    logAction('Logs Downloaded', `Downloaded ${actionLogs.length} log entries as CSV`);
-    showNotification('Logs downloaded!', 'success');
+    logAction('Save Downloaded', `Downloaded game progress with ${gameState.points} points`);
 }
 
-// Helper function to escape HTML
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+// Reset Game
+function resetGame() {
+    if (confirm('Are you sure? This will reset everything!')) {
+        localStorage.clear();
+        location.reload();
+    }
 }
